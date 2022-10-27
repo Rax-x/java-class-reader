@@ -4,7 +4,6 @@ from sys import argv
 from typing import Any
 from io import BytesIO
 from enum import Enum
-from pprint import PrettyPrinter
 
 class ClassModifiers(Enum):
     ACC_PUBLIC = 0x0001
@@ -31,6 +30,37 @@ class ConstantsTag(Enum):
     CONSTANT_MethodHandle = 15
     CONSTANT_MethodType = 16
     CONSTANT_InvokeDynamic = 18
+
+class CustomPrettyPrinter:
+    def __init__(self, indent: int = 4) -> None:
+        self.indent = indent
+
+    def __get_pairs(self, data: dict|list):
+        if isinstance(data, dict):
+            return data.items()
+        return enumerate(data)
+
+    def __prettify(self, items: Any, level: int = 1) -> str:
+
+        symbol = '[' if isinstance(items, list) else '{'
+        end_symbol = ']' if symbol == '[' else '}'
+
+        s = f"{symbol}\n"
+
+        pairs = self.__get_pairs(items)
+
+        for key, item in pairs:
+            s += f"{' ' * (self.indent * level)}{key} -> "
+            if isinstance(item, (list, dict)):
+                s += f"{self.__prettify(item, level=level+1)},\n"
+            else:    
+                s += f"{item},\n"
+        
+        s += f"{' ' * (self.indent * (level-1))}{end_symbol}"
+        return s
+
+    def print(self, data: Any) -> None:
+        print(self.__prettify(data))
 
 def read_class_file(filename: str) -> bytes:
     with open(filename, mode="rb") as f:
@@ -107,12 +137,12 @@ def main(argv: list[str]) -> None:
     else:
         files = argv[1:]
 
-        printer = PrettyPrinter(indent=2, sort_dicts=False)
+        printer = CustomPrettyPrinter()
 
         for file in files:
             bytecode = read_class_file(file)
             analyzer = BytecodeAnalyzer(bytecode)
-            printer.pprint(analyzer.analyze())
+            printer.print(analyzer.analyze())
             
 
 if __name__ == '__main__':

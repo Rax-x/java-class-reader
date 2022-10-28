@@ -1,9 +1,16 @@
-#!/bin/python3
-
 from sys import argv
-from typing import Any
+from typing import Any, List
 from io import BytesIO
 from enum import Enum
+
+GenericDict = dict[str, Any]
+Container = list|dict
+ListOfDict = list[GenericDict]
+
+# TODO: fix bugs with fields parser
+#   -- Add a verifier who checks if indexes are valid in constant pool (maybe in a another module???? idk)
+#   -- Write a "decoder" for access_flags
+#       -- Add access_flags constants for fields
 
 class ClassModifiers(Enum):
     ACC_PUBLIC = 0x0001
@@ -35,12 +42,12 @@ class CustomPrettyPrinter:
     def __init__(self, indent: int = 4) -> None:
         self.indent = indent
 
-    def __get_pairs(self, data: dict|list):
+    def __get_pairs(self, data: Container):
         if isinstance(data, dict):
             return data.items()
         return enumerate(data)
 
-    def __prettify(self, items: Any, level: int = 1) -> str:
+    def __prettify(self, items: Container, level: int = 1) -> str:
 
         symbol = '[' if isinstance(items, list) else '{'
         end_symbol = ']' if symbol == '[' else '}'
@@ -70,24 +77,62 @@ class BytecodeAnalyzer:
     def __init__(self, bytecode: bytes) -> None:
         self.f = BytesIO(bytecode)
         
-    def analyze(self) -> dict[str, Any]:
-        clazz = {}
+    def analyze(self) -> GenericDict:
+        clazz: GenericDict = {}
         clazz['magic'] = hex(self.parse_bytes(4))
         clazz['minor_version'] = self.parse_bytes(2)
         clazz['major_version'] = self.parse_bytes(2)
         clazz['constant_pool_count'] = self.parse_bytes(2)
         clazz['constant_pool'] = self.parse_constant_pool(clazz['constant_pool_count'])
+        clazz['access_flags'] = hex(self.parse_bytes(2) )
+        clazz['this_class'] = self.parse_bytes(2)
+        clazz['super_class'] = self.parse_bytes(2)
+        clazz['interfaces_count'] = self.parse_bytes(2)
+        clazz['interfaces'] = [self.parse_bytes(2)-1 for _ in range(clazz['interfaces_count'])]
+        clazz['fields_count'] = self.parse_bytes(2)
+        clazz['fields'] = self.parse_fields(clazz['fields_count'])
 
         self.f.close()
 
         return clazz
         
+    def parse_fields(self, size: int) -> ListOfDict:
+        fields: ListOfDict = []
+
+        for _ in range(size):
+            field: GenericDict = {}
+            field['access_flags'] = self.parse_bytes(2)
+            field['name_index'] = self.parse_bytes(2)
+            field['descriptor_index'] = self.parse_bytes(2)
+            field['attributes_count'] = self.parse_bytes(2)
+            field['attributes'] = self.parse_attributes(field['attributes_count'])
+
+            fields.append(field)
+
+        return fields
     
-    def parse_constant_pool(self, size) -> list[dict[str, Any]]:
-        pool = []
+    def parse_attributes(self, size: int) -> ListOfDict:
+        attributes: ListOfDict = []
+        
+        for _ in range(size):
+            attribute_name_index = self.parse_bytes(2)
+            attribute_length = self.parse_bytes(4)
+
+            attributes.append(
+                {
+                    'attribute_name_index': attribute_name_index,
+                    'attribute_length': attribute_length,
+                    'info': [self.parse_bytes(1) for _ in range(attribute_length)]
+                }
+            )
+
+        return attributes
+
+    def parse_constant_pool(self, size) -> ListOfDict:
+        pool: ListOfDict = []
         for _ in range(size - 1):
             tag = ConstantsTag(self.parse_bytes(1))
-            info = { 'tag': tag.name }
+            info: GenericDict = { 'tag': tag.name }
             if tag == ConstantsTag.CONSTANT_Class:
                 info['name_index'] = self.parse_bytes(2)
             elif tag in [ConstantsTag.CONSTANT_Fieldref, ConstantsTag.CONSTANT_Methodref, ConstantsTag.CONSTANT_InterfaceMethodref]:
@@ -116,11 +161,6 @@ class BytecodeAnalyzer:
                 info['name_and_type_index'] = self.parse_bytes(2)
             else:
                 raise NotImplementedError(f"Unexpected constant tag '{tag.name}'")
-
-            info = {
-                'tag' : tag.name,
-                'info': info
-            }
 
             pool.append(info)
             

@@ -1,5 +1,5 @@
 from sys import argv
-from typing import Any, List
+from typing import Any, Iterable
 from io import BytesIO
 from enum import Enum
 
@@ -9,8 +9,7 @@ ListOfDict = list[GenericDict]
 
 # TODO: fix bugs with fields parser
 #   -- Add a verifier who checks if indexes are valid in constant pool (maybe in a another module???? idk)
-#   -- Write a "decoder" for access_flags
-#       -- Add access_flags constants for fields
+
 
 class ClassModifiers(Enum):
     ACC_PUBLIC = 0x0001
@@ -20,6 +19,17 @@ class ClassModifiers(Enum):
     ACC_ABSTRACT = 0x0400
     ACC_SYNTHETIC = 0x1000
     ACC_ANNOTATION = 0x2000
+    ACC_ENUM = 0x4000
+
+class FieldModifiers(Enum):
+    ACC_PUBLIC = 0x0001
+    ACC_PRIVATE = 0x0002
+    ACC_PROTECTED = 0x0004
+    ACC_STATIC = 0x0008
+    ACC_FINAL = 0x0010
+    ACC_VOLATILE = 0x0040
+    ACC_TRANSIENT =	0x0080
+    ACC_SYNTHETIC =	0x1000
     ACC_ENUM = 0x4000
 
 class ConstantsTag(Enum):
@@ -83,8 +93,8 @@ class BytecodeAnalyzer:
         clazz['minor_version'] = self.parse_bytes(2)
         clazz['major_version'] = self.parse_bytes(2)
         clazz['constant_pool_count'] = self.parse_bytes(2)
-        clazz['constant_pool'] = self.parse_constant_pool(clazz['constant_pool_count'])
-        clazz['access_flags'] = hex(self.parse_bytes(2) )
+        clazz['constant_pool'] = self.parse_constant_pool(clazz['constant_pool_count']-1)
+        clazz['access_flags'] = self.decode_access_flags(self.parse_bytes(2), ClassModifiers)
         clazz['this_class'] = self.parse_bytes(2)
         clazz['super_class'] = self.parse_bytes(2)
         clazz['interfaces_count'] = self.parse_bytes(2)
@@ -101,7 +111,7 @@ class BytecodeAnalyzer:
 
         for _ in range(size):
             field: GenericDict = {}
-            field['access_flags'] = self.parse_bytes(2)
+            field['access_flags'] = self.decode_access_flags(self.parse_bytes(2), FieldModifiers)
             field['name_index'] = self.parse_bytes(2)
             field['descriptor_index'] = self.parse_bytes(2)
             field['attributes_count'] = self.parse_bytes(2)
@@ -130,7 +140,7 @@ class BytecodeAnalyzer:
 
     def parse_constant_pool(self, size) -> ListOfDict:
         pool: ListOfDict = []
-        for _ in range(size - 1):
+        for _ in range(size):
             tag = ConstantsTag(self.parse_bytes(1))
             info: GenericDict = { 'tag': tag.name }
             if tag == ConstantsTag.CONSTANT_Class:
@@ -165,6 +175,13 @@ class BytecodeAnalyzer:
             pool.append(info)
             
         return pool
+
+    def decode_access_flags(self, access_flags: int, constants: Iterable) -> list[str]:
+        modifiers: list[str] = []
+        for modifier in constants:
+            if (access_flags & modifier.value) != 0:
+                modifiers.append(modifier.name)
+        return modifiers
 
     def parse_bytes(self, n: int) -> int:
         return int.from_bytes(self.f.read(n), 'big')

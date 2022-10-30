@@ -7,8 +7,8 @@ GenericDict = dict[str, Any]
 Container = list|dict
 ListOfDict = list[GenericDict]
 
-# TODO: fix bugs with fields parser
-#   -- Add a verifier who checks if indexes are valid in constant pool (maybe in a another module???? idk)
+# TODO:
+#   -- Add a verifier who checks if indexes are valid in constant pool
 
 
 class ClassModifiers(Enum):
@@ -31,6 +31,20 @@ class FieldModifiers(Enum):
     ACC_TRANSIENT =	0x0080
     ACC_SYNTHETIC =	0x1000
     ACC_ENUM = 0x4000
+
+class MethodModifiers(Enum):
+    ACC_PUBLIC = 0x0001	
+    ACC_PRIVATE	= 0x0002
+    ACC_PROTECTED = 0x0004	
+    ACC_STATIC = 0x0008	
+    ACC_FINAL = 0x0010
+    ACC_SYNCHRONIZED = 0x0020	
+    ACC_BRIDGE = 0x0040	
+    ACC_VARARGS = 0x0080	
+    ACC_NATIVE = 0x0100	
+    ACC_ABSTRACT = 0x0400	
+    ACC_STRICT = 0x0800	
+    ACC_SYNTHETIC = 0x1000
 
 class ConstantsTag(Enum):
     CONSTANT_Class = 7
@@ -100,26 +114,33 @@ class BytecodeAnalyzer:
         clazz['interfaces_count'] = self.parse_bytes(2)
         clazz['interfaces'] = [self.parse_bytes(2)-1 for _ in range(clazz['interfaces_count'])]
         clazz['fields_count'] = self.parse_bytes(2)
-        clazz['fields'] = self.parse_fields(clazz['fields_count'])
+        clazz['fields'] = self.parse_fields_or_methods(clazz['fields_count'], FieldModifiers)
+        clazz['methods_count'] = self.parse_bytes(2)
+        clazz['methods'] = self.parse_fields_or_methods(clazz['methods_count'], MethodModifiers)
+        clazz['attributes_count'] = self.parse_bytes(2)
+        clazz['attributes'] = self.parse_attributes(clazz['attributes_count'])
 
         self.f.close()
 
         return clazz
         
-    def parse_fields(self, size: int) -> ListOfDict:
-        fields: ListOfDict = []
+    def parse_methods(self, size: int) -> ListOfDict:
+        return []
+    
+    def parse_fields_or_methods(self, size: int, access_flags_constants: Iterable) -> ListOfDict:
+        items: ListOfDict = []
 
         for _ in range(size):
-            field: GenericDict = {}
-            field['access_flags'] = self.decode_access_flags(self.parse_bytes(2), FieldModifiers)
-            field['name_index'] = self.parse_bytes(2)
-            field['descriptor_index'] = self.parse_bytes(2)
-            field['attributes_count'] = self.parse_bytes(2)
-            field['attributes'] = self.parse_attributes(field['attributes_count'])
+            item: GenericDict = {}
+            item['access_flags'] = self.decode_access_flags(self.parse_bytes(2), access_flags_constants)
+            item['name_index'] = self.parse_bytes(2)
+            item['descriptor_index'] = self.parse_bytes(2)
+            item['attributes_count'] = self.parse_bytes(2)
+            item['attributes'] = self.parse_attributes(item['attributes_count'])
 
-            fields.append(field)
+            items.append(item)
 
-        return fields
+        return items
     
     def parse_attributes(self, size: int) -> ListOfDict:
         attributes: ListOfDict = []
@@ -138,7 +159,7 @@ class BytecodeAnalyzer:
 
         return attributes
 
-    def parse_constant_pool(self, size) -> ListOfDict:
+    def parse_constant_pool(self, size: int) -> ListOfDict:
         pool: ListOfDict = []
         for _ in range(size):
             tag = ConstantsTag(self.parse_bytes(1))
@@ -181,11 +202,15 @@ class BytecodeAnalyzer:
         for modifier in constants:
             if (access_flags & modifier.value) != 0:
                 modifiers.append(modifier.name)
+        
         return modifiers
 
     def parse_bytes(self, n: int) -> int:
         return int.from_bytes(self.f.read(n), 'big')
 
+class BytecodeVerifier:
+    # TODO: implement...
+    pass
 
 def main(argv: list[str]) -> None:
     if len(argv) == 1:

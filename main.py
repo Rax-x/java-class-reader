@@ -1,7 +1,9 @@
-from sys import argv
 from typing import Any, Iterable
 from io import BytesIO
 from enum import Enum
+import argparse
+
+from click import FileError
 
 GenericDict = dict[str, Any]
 Container = list|dict
@@ -66,24 +68,24 @@ class CustomPrettyPrinter:
     def __init__(self, indent: int = 4) -> None:
         self.indent = indent
 
-    def __get_pairs(self, data: Container):
+    def get_pairs(self, data: Container):
         if isinstance(data, dict):
             return data.items()
         return enumerate(data)
 
-    def __prettify(self, items: Container, level: int = 1) -> str:
+    def prettify(self, items: Container, level: int = 1) -> str:
 
         symbol = '[' if isinstance(items, list) else '{'
         end_symbol = ']' if symbol == '[' else '}'
 
         s = f"{symbol}\n"
 
-        pairs = self.__get_pairs(items)
+        pairs = self.get_pairs(items)
 
         for key, item in pairs:
             s += f"{' ' * (self.indent * level)}{key} -> "
             if isinstance(item, (list, dict)):
-                s += f"{self.__prettify(item, level=level+1)},\n"
+                s += f"{self.prettify(item, level=level+1)},\n"
             else:    
                 s += f"{item},\n"
         
@@ -91,7 +93,7 @@ class CustomPrettyPrinter:
         return s
 
     def print(self, data: Any) -> None:
-        print(self.__prettify(data))
+        print(self.prettify(data))
 
 def read_class_file(filename: str) -> bytes:
     with open(filename, mode="rb") as f:
@@ -112,7 +114,7 @@ class BytecodeAnalyzer:
         clazz['this_class'] = self.parse_bytes(2)
         clazz['super_class'] = self.parse_bytes(2)
         clazz['interfaces_count'] = self.parse_bytes(2)
-        clazz['interfaces'] = [self.parse_bytes(2)-1 for _ in range(clazz['interfaces_count'])]
+        clazz['interfaces'] = [self.parse_bytes(2) for _ in range(clazz['interfaces_count'])]
         clazz['fields_count'] = self.parse_bytes(2)
         clazz['fields'] = self.parse_fields_or_methods(clazz['fields_count'], FieldModifiers)
         clazz['methods_count'] = self.parse_bytes(2)
@@ -153,7 +155,7 @@ class BytecodeAnalyzer:
                 {
                     'attribute_name_index': attribute_name_index,
                     'attribute_length': attribute_length,
-                    'info': [self.parse_bytes(1) for _ in range(attribute_length)]
+                    'info': self.f.read(attribute_length)
                 }
             )
 
@@ -209,23 +211,60 @@ class BytecodeAnalyzer:
         return int.from_bytes(self.f.read(n), 'big')
 
 class BytecodeVerifier:
-    # TODO: implement...
-    pass
+    def __init__(self, parsed_bytecode: GenericDict) -> None:
+        self.bytecode: GenericDict = parsed_bytecode
 
-def main(argv: list[str]) -> None:
-    if len(argv) == 1:
-        print(f"Usage: {argv[0]} <*.class file>")
-        exit(-1)
-    else:
-        files = argv[1:]
+    def verify(self) -> None:
+        pass
 
-        printer = CustomPrettyPrinter()
+def main() -> None:
 
-        for file in files:
-            bytecode = read_class_file(file)
-            analyzer = BytecodeAnalyzer(bytecode)
-            printer.print(analyzer.analyze())
-            
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument(
+        "file", 
+        help="Java compiled .class file",
+        type=str
+    )
+
+    parser.add_argument(
+        "-c", "--check",
+        help="Check if bytecode is valid",
+        action="store_true"
+    )
+
+    parser.add_argument(
+        "-d", "--dump", 
+        help="Save output in a text file with same name of .class file",
+        action="store_true"
+    )
+
+    args = parser.parse_args()
+
+    try:
+        if not args.file.endswith(".class"):
+            raise Exception("Invalid file (Wrong file format).")
+
+        bytecode: bytes = read_class_file(args.file)
+        analyzer: BytecodeAnalyzer = BytecodeAnalyzer(bytecode)
+        
+        output = analyzer.analyze()
+
+        if args.check:
+            verifier: BytecodeVerifier = BytecodeVerifier(output)
+            verifier.verify()
+
+        printer: CustomPrettyPrinter = CustomPrettyPrinter()
+
+        if args.dump:
+            filename: str = f"{args.file[:-5]}txt"
+            with open(filename, "w") as f:
+                f.write(printer.prettify(output))
+        else:
+            printer.print(output)
+
+    except Exception as ex:
+        print(ex)  
 
 if __name__ == '__main__':
-    main(argv)
+    main()

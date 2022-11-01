@@ -3,8 +3,6 @@ from io import BytesIO
 from enum import Enum
 import argparse
 
-from click import FileError
-
 GenericDict = dict[str, Any]
 Container = list|dict
 ListOfDict = list[GenericDict]
@@ -64,36 +62,25 @@ class ConstantsTag(Enum):
     CONSTANT_MethodType = 16
     CONSTANT_InvokeDynamic = 18
 
-class CustomPrettyPrinter:
-    def __init__(self, indent: int = 4) -> None:
-        self.indent = indent
 
-    def get_pairs(self, data: Container):
-        if isinstance(data, dict):
-            return data.items()
-        return enumerate(data)
+def prettify(data: Container, indent: int = 4, level: int = 1) -> str:
 
-    def prettify(self, items: Container, level: int = 1) -> str:
+    symbol = '[' if isinstance(data, list) else '{'
+    end_symbol = ']' if symbol == '[' else '}'
 
-        symbol = '[' if isinstance(items, list) else '{'
-        end_symbol = ']' if symbol == '[' else '}'
+    s = f"{symbol}\n"
 
-        s = f"{symbol}\n"
+    pairs = enumerate(data) if isinstance(data, list) else data.items()
 
-        pairs = self.get_pairs(items)
-
-        for key, item in pairs:
-            s += f"{' ' * (self.indent * level)}{key} -> "
-            if isinstance(item, (list, dict)):
-                s += f"{self.prettify(item, level=level+1)},\n"
-            else:    
-                s += f"{item},\n"
-        
-        s += f"{' ' * (self.indent * (level-1))}{end_symbol}"
-        return s
-
-    def print(self, data: Any) -> None:
-        print(self.prettify(data))
+    for key, item in pairs:
+        s += f"{' ' * (indent * level)}{key} -> "
+        if isinstance(item, (list, dict)):
+            s += f"{prettify(item, indent=indent, level=level+1)},\n"
+        else:    
+            s += f"{item},\n"
+    
+    s += f"{' ' * (indent * (level-1))}{end_symbol}"
+    return s
 
 def read_class_file(filename: str) -> bytes:
     with open(filename, mode="rb") as f:
@@ -211,11 +198,27 @@ class BytecodeAnalyzer:
         return int.from_bytes(self.f.read(n), 'big')
 
 class BytecodeVerifier:
-    def __init__(self, parsed_bytecode: GenericDict) -> None:
-        self.bytecode: GenericDict = parsed_bytecode
+    def __init__(self, class_info: GenericDict) -> None:
+        self.class_info: GenericDict = class_info
 
-    def verify(self) -> None:
-        pass
+    def verify_tag(self, index: int, tag: ConstantsTag) -> bool:
+        info = self.class_info['constant_pool'][index-1]
+        return info['tag'] == tag.name
+
+    def verify(self) -> bool:
+        verified: bool = True
+        index: int = -1
+
+        index = self.class_info['this_class']
+        if not self.verify_tag(index, ConstantsTag.CONSTANT_Class):
+            return not verified
+
+        index= self.class_info['super_class']
+        if not self.verify_tag(index, ConstantsTag.CONSTANT_Class):
+            print("Error")
+            return not verified
+
+        return verified
 
 def main() -> None:
 
@@ -252,19 +255,21 @@ def main() -> None:
 
         if args.check:
             verifier: BytecodeVerifier = BytecodeVerifier(output)
-            verifier.verify()
+            if not verifier.verify():
+                print("Error: Bytecode corrupted!")
+                exit(-1)
 
-        printer: CustomPrettyPrinter = CustomPrettyPrinter()
+        prettified_output: str = prettify(output)
 
         if args.dump:
             filename: str = f"{args.file[:-5]}txt"
             with open(filename, "w") as f:
-                f.write(printer.prettify(output))
+                f.write(prettified_output)
         else:
-            printer.print(output)
+           print(prettified_output)
 
     except Exception as ex:
-        print(ex)  
+        print(str(ex))  
 
 if __name__ == '__main__':
     main()

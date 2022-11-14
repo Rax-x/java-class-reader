@@ -1,6 +1,6 @@
 from typing import Any, Iterable
 from io import BytesIO
-from enum import Enum
+from enum import Enum, auto
 import argparse
 
 GenericDict = dict[str, Any]
@@ -151,7 +151,7 @@ class BytecodeAnalyzer:
     def parse_constant_pool(self, size: int) -> ListOfDict:
         pool: ListOfDict = []
         for _ in range(size):
-            tag = ConstantsTag(self.parse_bytes(1))
+            tag: ConstantsTag = ConstantsTag(self.parse_bytes(1))
             info: GenericDict = { 'tag': tag.name }
             if tag == ConstantsTag.CONSTANT_Class:
                 info['name_index'] = self.parse_bytes(2)
@@ -201,22 +201,99 @@ class BytecodeVerifier:
     def __init__(self, class_info: GenericDict) -> None:
         self.class_info: GenericDict = class_info
 
+    def not_verified(self)-> bool:
+        return False
+
     def verify_tag(self, index: int, tag: ConstantsTag) -> bool:
-        info = self.class_info['constant_pool'][index-1]
+        info: GenericDict = self.class_info['constant_pool'][index-1]
         return info['tag'] == tag.name
+
+    def verifiy_constant_pool_info(self, info: GenericDict) -> bool:
+        tag: ConstantsTag = ConstantsTag[info['tag']]
+        verified: bool = True
+
+        if tag == ConstantsTag.CONSTANT_Class:
+            if not self.verify_tag(info['name_index'], ConstantsTag.CONSTANT_Utf8):
+                return not verified
+        elif tag in [ConstantsTag.CONSTANT_Fieldref, ConstantsTag.CONSTANT_Methodref, ConstantsTag.CONSTANT_InterfaceMethodref]:
+            if not self.verify_tag(info['class_index'], ConstantsTag.CONSTANT_Class):
+                return not verified
+            
+            if not self.verify_tag(info['name_and_type_index'], ConstantsTag.CONSTANT_NameAndType):
+                return not verified
+        elif tag == ConstantsTag.CONSTANT_String:
+            if not self.verify_tag(info['string_index'], ConstantsTag.CONSTANT_Utf8):
+                return not verified
+        elif tag == ConstantsTag.CONSTANT_NameAndType:
+            if (
+                not self.verify_tag(info['name_index'], ConstantsTag.CONSTANT_Utf8) and 
+                not self.verify_tag(info['descriptor_index'], ConstantsTag.CONSTANT_Utf8)
+            ):
+                return not verified
+        elif tag == ConstantsTag.CONSTANT_MethodHandle:
+
+            # Documentation: https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.4.8
+            
+            reference_kind: int = info['reference_kind']
+            
+            if reference_kind not in range(1, 10):
+                return not verified
+            
+            index: int = info['reference_index']
+
+            if reference_kind in range(1, 5):
+                if not self.verify_tag(index, ConstantsTag.CONSTANT_Fieldref):
+                    return not verified
+            elif reference_kind in range(5, 10):
+                tag: ConstantsTag = (
+                    ConstantsTag.CONSTANT_Methodref
+                    if reference_kind != 9 else 
+                    ConstantsTag.CONSTANT_InterfaceMethodref
+                )
+            
+                if not self.verify_tag(index, tag):
+                    return not verified
+
+                pool: ListOfDict = self.class_info['constant_pool']
+                name_type_index: int = pool[index-1]['name_and_type_index']
+                name_index: int = pool[name_type_index-1]['name_index']
+                
+                name: str = pool[name_index-1]['bytes'].decode('ascii')
+
+                if reference_kind in [5, 6, 7, 9]:
+                    if name in ['<init>', '<clinit>']:
+                        return not verified
+                else:
+                    # In this case the only value in 8
+                    if name != '<init>':
+                        return not verified
+        elif tag == ConstantsTag.CONSTANT_MethodType:
+            if not self.verify_tag(info['descriptor_index'], ConstantsTag.CONSTANT_Utf8):
+                return not verified
+        elif tag == ConstantsTag.CONSTANT_InvokeDynamic:
+            if not self.verify_tag(info['name_and_type_index'], ConstantsTag.CONSTANT_NameAndType):
+                return not verified
+
+        return verified
 
     def verify(self) -> bool:
         verified: bool = True
         index: int = -1
 
+        if int(self.class_info['magic'], 16) != 0xCAFEBABE:
+            return not verified
+
         index = self.class_info['this_class']
         if not self.verify_tag(index, ConstantsTag.CONSTANT_Class):
             return not verified
 
-        index= self.class_info['super_class']
+        index = self.class_info['super_class']
         if not self.verify_tag(index, ConstantsTag.CONSTANT_Class):
-            print("Error")
             return not verified
+
+        for info in self.class_info['constant_pool']:
+            if not self.verifiy_constant_pool_info(info):
+                return not verified
 
         return verified
 

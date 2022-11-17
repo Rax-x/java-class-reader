@@ -112,9 +112,6 @@ class BytecodeAnalyzer:
         self.f.close()
 
         return clazz
-        
-    def parse_methods(self, size: int) -> ListOfDict:
-        return []
     
     def parse_fields_or_methods(self, size: int, access_flags_constants: Iterable) -> ListOfDict:
         items: ListOfDict = []
@@ -201,12 +198,35 @@ class BytecodeVerifier:
     def __init__(self, class_info: GenericDict) -> None:
         self.class_info: GenericDict = class_info
 
-    def not_verified(self)-> bool:
-        return False
-
     def verify_tag(self, index: int, tag: ConstantsTag) -> bool:
         info: GenericDict = self.class_info['constant_pool'][index-1]
         return info['tag'] == tag.name
+
+    def verify_attribute(self, attribute: GenericDict) -> bool:
+        return self.verify_tag(attribute['attribute_name_index'], ConstantsTag.CONSTANT_Utf8)
+
+    def verify_fields_or_methods(self, item: GenericDict) -> bool:
+        verified: bool = True
+
+        if (
+            not self.verify_tag(item['name_index'], ConstantsTag.CONSTANT_Utf8) or
+            not self.verify_tag(item['descriptor_index'], ConstantsTag.CONSTANT_Utf8)
+        ):
+            return not verified
+
+        for attr in item['attributes']:
+            if not self.verify_attribute(attr):
+                return not verified
+
+        return verified
+
+    def verify_interfaces(self, interfaces_indexes: list[int]) -> bool:
+        verified: bool = True
+        for index in interfaces_indexes:
+            if not self.verify_tag(index, ConstantsTag.CONSTANT_Class):
+                return not verified
+
+        return verified
 
     def verifiy_constant_pool_info(self, info: GenericDict) -> bool:
         tag: ConstantsTag = ConstantsTag[info['tag']]
@@ -245,7 +265,7 @@ class BytecodeVerifier:
                 if not self.verify_tag(index, ConstantsTag.CONSTANT_Fieldref):
                     return not verified
             elif reference_kind in range(5, 10):
-                tag: ConstantsTag = (
+                tag = (
                     ConstantsTag.CONSTANT_Methodref
                     if reference_kind != 9 else 
                     ConstantsTag.CONSTANT_InterfaceMethodref
@@ -294,6 +314,19 @@ class BytecodeVerifier:
         for info in self.class_info['constant_pool']:
             if not self.verifiy_constant_pool_info(info):
                 return not verified
+
+        if not self.verify_interfaces(self.class_info['interfaces']):
+            return not verified
+
+        if (
+            not self.verify_fields_or_methods(self.class_info['fields']) or
+            not self.verify_fields_or_methods(self.class_info['methods'])
+        ):
+            return not verified 
+
+        for attribute in self.class_info['attributes']:
+            if not self.verify_attribute(attribute):
+                return not verified      
 
         return verified
 

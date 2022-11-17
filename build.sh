@@ -1,2 +1,2 @@
 mypy main.py
-python3 main.py Main.class --check
+python3 main.py Main.class --check -d

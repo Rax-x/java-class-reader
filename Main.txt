@@ -1,0 +1,213 @@
+{
+    magic -> 0xcafebabe,
+    minor_version -> 0,
+    major_version -> 55,
+    constant_pool_count -> 22,
+    constant_pool -> [
+        0 -> {
+            tag -> CONSTANT_Methodref,
+            class_index -> 3,
+            name_and_type_index -> 19,
+        },
+        1 -> {
+            tag -> CONSTANT_Class,
+            name_index -> 20,
+        },
+        2 -> {
+            tag -> CONSTANT_Class,
+            name_index -> 21,
+        },
+        3 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 4,
+            bytes -> b'test',
+        },
+        4 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 1,
+            bytes -> b'I',
+        },
+        5 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 13,
+            bytes -> b'ConstantValue',
+        },
+        6 -> {
+            tag -> CONSTANT_Integer,
+            bytes -> b'\x00\x00\x00\x01',
+        },
+        7 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 6,
+            bytes -> b'<init>',
+        },
+        8 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 3,
+            bytes -> b'()V',
+        },
+        9 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 4,
+            bytes -> b'Code',
+        },
+        10 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 15,
+            bytes -> b'LineNumberTable',
+        },
+        11 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 3,
+            bytes -> b'foo',
+        },
+        12 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 4,
+            bytes -> b'(I)V',
+        },
+        13 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 4,
+            bytes -> b'(F)V',
+        },
+        14 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 4,
+            bytes -> b'main',
+        },
+        15 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 22,
+            bytes -> b'([Ljava/lang/String;)V',
+        },
+        16 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 10,
+            bytes -> b'SourceFile',
+        },
+        17 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 9,
+            bytes -> b'Main.java',
+        },
+        18 -> {
+            tag -> CONSTANT_NameAndType,
+            name_index -> 8,
+            descriptor_index -> 9,
+        },
+        19 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 4,
+            bytes -> b'Main',
+        },
+        20 -> {
+            tag -> CONSTANT_Utf8,
+            length -> 16,
+            bytes -> b'java/lang/Object',
+        },
+    ],
+    access_flags -> [
+        0 -> ACC_PUBLIC,
+        1 -> ACC_SUPER,
+    ],
+    this_class -> 2,
+    super_class -> 3,
+    interfaces_count -> 0,
+    interfaces -> [
+    ],
+    fields_count -> 1,
+    fields -> [
+        0 -> {
+            access_flags -> [
+                0 -> ACC_PRIVATE,
+                1 -> ACC_STATIC,
+                2 -> ACC_FINAL,
+            ],
+            name_index -> 4,
+            descriptor_index -> 5,
+            attributes_count -> 1,
+            attributes -> [
+                0 -> {
+                    attribute_name_index -> 6,
+                    attribute_length -> 2,
+                    info -> b'\x00\x07',
+                },
+            ],
+        },
+    ],
+    methods_count -> 4,
+    methods -> [
+        0 -> {
+            access_flags -> [
+                0 -> ACC_PUBLIC,
+            ],
+            name_index -> 8,
+            descriptor_index -> 9,
+            attributes_count -> 1,
+            attributes -> [
+                0 -> {
+                    attribute_name_index -> 10,
+                    attribute_length -> 29,
+                    info -> b'\x00\x01\x00\x01\x00\x00\x00\x05*\xb7\x00\x01\xb1\x00\x00\x00\x01\x00\x0b\x00\x00\x00\x06\x00\x01\x00\x00\x00\x01',
+                },
+            ],
+        },
+        1 -> {
+            access_flags -> [
+                0 -> ACC_PUBLIC,
+                1 -> ACC_STATIC,
+            ],
+            name_index -> 12,
+            descriptor_index -> 13,
+            attributes_count -> 1,
+            attributes -> [
+                0 -> {
+                    attribute_name_index -> 10,
+                    attribute_length -> 25,
+                    info -> b'\x00\x00\x00\x01\x00\x00\x00\x01\xb1\x00\x00\x00\x01\x00\x0b\x00\x00\x00\x06\x00\x01\x00\x00\x00\x02',
+                },
+            ],
+        },
+        2 -> {
+            access_flags -> [
+                0 -> ACC_PUBLIC,
+                1 -> ACC_STATIC,
+            ],
+            name_index -> 12,
+            descriptor_index -> 14,
+            attributes_count -> 1,
+            attributes -> [
+                0 -> {
+                    attribute_name_index -> 10,
+                    attribute_length -> 25,
+                    info -> b'\x00\x00\x00\x01\x00\x00\x00\x01\xb1\x00\x00\x00\x01\x00\x0b\x00\x00\x00\x06\x00\x01\x00\x00\x00\x03',
+                },
+            ],
+        },
+        3 -> {
+            access_flags -> [
+                0 -> ACC_PUBLIC,
+                1 -> ACC_STATIC,
+            ],
+            name_index -> 15,
+            descriptor_index -> 16,
+            attributes_count -> 1,
+            attributes -> [
+                0 -> {
+                    attribute_name_index -> 10,
+                    attribute_length -> 25,
+                    info -> b'\x00\x00\x00\x01\x00\x00\x00\x01\xb1\x00\x00\x00\x01\x00\x0b\x00\x00\x00\x06\x00\x01\x00\x00\x00\x08',
+                },
+            ],
+        },
+    ],
+    attributes_count -> 1,
+    attributes -> [
+        0 -> {
+            attribute_name_index -> 17,
+            attribute_length -> 2,
+            info -> b'\x00\x12',
+        },
+    ],
+}

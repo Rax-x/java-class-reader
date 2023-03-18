@@ -2,14 +2,11 @@ from typing import Any, Iterable
 from io import BytesIO
 from enum import Enum, auto
 import argparse
+import sys
 
 GenericDict = dict[str, Any]
 Container = list|dict
 ListOfDict = list[GenericDict]
-
-# TODO:
-#   -- Add a verifier who checks if indexes are valid in constant pool
-
 
 class ClassModifiers(Enum):
     ACC_PUBLIC = 0x0001
@@ -205,18 +202,19 @@ class BytecodeVerifier:
     def verify_attribute(self, attribute: GenericDict) -> bool:
         return self.verify_tag(attribute['attribute_name_index'], ConstantsTag.CONSTANT_Utf8)
 
-    def verify_fields_or_methods(self, item: GenericDict) -> bool:
+    def verify_fields_or_methods(self, items: ListOfDict) -> bool:
         verified: bool = True
 
-        if (
-            not self.verify_tag(item['name_index'], ConstantsTag.CONSTANT_Utf8) or
-            not self.verify_tag(item['descriptor_index'], ConstantsTag.CONSTANT_Utf8)
-        ):
-            return not verified
-
-        for attr in item['attributes']:
-            if not self.verify_attribute(attr):
+        for item in items:
+            if (
+                not self.verify_tag(item['name_index'], ConstantsTag.CONSTANT_Utf8) or
+                not self.verify_tag(item['descriptor_index'], ConstantsTag.CONSTANT_Utf8)
+            ):
                 return not verified
+
+            for attr in item['attributes']:
+                if not self.verify_attribute(attr):
+                    return not verified
 
         return verified
 
@@ -265,11 +263,7 @@ class BytecodeVerifier:
                 if not self.verify_tag(index, ConstantsTag.CONSTANT_Fieldref):
                     return not verified
             elif reference_kind in range(5, 10):
-                tag = (
-                    ConstantsTag.CONSTANT_Methodref
-                    if reference_kind != 9 else 
-                    ConstantsTag.CONSTANT_InterfaceMethodref
-                )
+                tag = ConstantsTag.CONSTANT_Methodref if reference_kind != 9 else ConstantsTag.CONSTANT_InterfaceMethodref
             
                 if not self.verify_tag(index, tag):
                     return not verified
@@ -284,7 +278,7 @@ class BytecodeVerifier:
                     if name in ['<init>', '<clinit>']:
                         return not verified
                 else:
-                    # In this case the only value in 8
+                    # In this case the only value is 8
                     if name != '<init>':
                         return not verified
         elif tag == ConstantsTag.CONSTANT_MethodType:
@@ -379,6 +373,7 @@ def main() -> None:
            print(prettified_output)
 
     except Exception as ex:
+        print(sys.exc_info())
         print(str(ex))  
 
 if __name__ == '__main__':

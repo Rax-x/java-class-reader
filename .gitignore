@@ -1,3 +1,4 @@
 *.class
 *.java
-*.venv
+.venv
+.mypy_cache

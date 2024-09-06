@@ -8,6 +8,10 @@ The idea of this project comes from the series of videos by [Tsoding](https://gi
 > The script actually parses only some attributes like `Code` or `ConstantValue`.
 > The parsing of the other attributes is still a work in progress.
 
+> [!IMPORTANT]
+> The reader follows the Java 8 specification.
+> There is no guarantee that it will work correctly with newer versions of Java.
+
 ## Usage
 
 ```
@@ -22,6 +26,6 @@ options:
 ```
 
 ### Resources
-- [Java class File Format](https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html)
+- [Java class File Format](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html)
 - [Java bytecode instructions](https://en.wikipedia.org/wiki/List_of_Java_bytecode_instructions)
-- [Java attributes](https://docs.oracle.com/javase/specs/jvms/se13/html/jvms-4.html#jvms-4.7)
+- [Java attributes](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.7)

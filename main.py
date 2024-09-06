@@ -64,6 +64,9 @@ def prettify(data: Container, indent: int = 4, level: int = 1) -> str:
     paren = '[' if isinstance(data, list) else '{'
     end_paren = ']' if paren == '[' else '}'
 
+    if len(data) == 0:
+        return f"{paren}{end_paren}"
+
     output = f"{paren}\n"
 
     pairs = enumerate(data, start=1) if isinstance(data, list) else data.items()
@@ -733,12 +736,13 @@ class JavaClassParser:
     def _parse_constant_pool(self, size: int) -> ListOfDict:
         pool: ListOfDict = []
 
-        for _ in range(size):
+        i: int = 0
+        while i < size:
             tag: ConstantsTag = ConstantsTag(self._read_byte())
             info: GenericDict = { 'tag': tag.name }
 
             match tag:
-                case  ConstantsTag.CONSTANT_Class:
+                case ConstantsTag.CONSTANT_Class:
                     info['name_index'] = self._read_short()
                 case ConstantsTag.CONSTANT_Fieldref | ConstantsTag.CONSTANT_Methodref | ConstantsTag.CONSTANT_InterfaceMethodref:
                     info['class_index'] = self._read_short()
@@ -746,10 +750,18 @@ class JavaClassParser:
                 case ConstantsTag.CONSTANT_String:
                     info['string_index'] = self._read_short()
                 case ConstantsTag.CONSTANT_Integer | ConstantsTag.CONSTANT_Float:
-                    info['bytes'] = self._read_bytes(4)
+                    info['bytes'] = self._read_int()
                 case ConstantsTag.CONSTANT_Long | ConstantsTag.CONSTANT_Double:
-                    info['high_bytes'] = self._read_bytes(4)
-                    info['low_bytes'] = self._read_bytes(4)
+                    info['high_bytes'] = self._read_int()
+                    info['low_bytes'] = self._read_int()
+
+                    # According with the documentation the next cell is considered unusable
+                    # https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4.5
+
+                    pool.append(info)
+                    pool.append({})
+                    i += 2
+                    continue
                 case ConstantsTag.CONSTANT_NameAndType:
                     info['name_index'] = self._read_short()
                     info['descriptor_index'] = self._read_short()
@@ -766,6 +778,7 @@ class JavaClassParser:
                     info['name_and_type_index'] = self._read_short()
 
             pool.append(info)
+            i += 1
             
         return pool
 
@@ -778,13 +791,13 @@ class JavaClassParser:
         return modifiers
 
     def _read_byte(self) -> int:
-        return int.from_bytes(self._read_bytes(1))
+        return int.from_bytes(self._read_bytes(1), 'big')
 
     def _read_short(self) -> int:
-        return int.from_bytes(self._read_bytes(2))
+        return int.from_bytes(self._read_bytes(2), 'big')
 
     def _read_int(self) -> int:
-        return int.from_bytes(self._read_bytes(4))
+        return int.from_bytes(self._read_bytes(4), 'big')
 
     def _read_bytes(self, n: int) -> bytes:
         return self.stream.read(n)

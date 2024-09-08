@@ -1,6 +1,6 @@
 # Java Class Reader
 
-This is a simple python script that reads Java `.class` file and print its contents on stdout or a specified output.
+This is a simple python script that reads Java `.class` file and print its contents on stdout or a specified output stream.
 The idea of this project comes from the series of videos by [Tsoding](https://github.com/tsoding) about 
 [JelloVM](https://github.com/tsoding/JelloVM).
 
@@ -24,6 +24,14 @@ options:
   -h, --help   show this help message and exit
   -d, --dump   Save output in a text file with same name of .class file
 ```
+
+## TODO
+
+- [ ] Support for other attributes
+- [ ] Separation in multiple files
+- [ ] Support for multiple .class files
+- [ ] Support for .jar files
+- [ ] Better CLI interface
 
 ### Resources
 - [Java class File Format](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html)

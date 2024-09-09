@@ -27,7 +27,7 @@ options:
 
 ## TODO
 
-- [ ] Support for other attributes
+- [x] Support for other attributes
 - [ ] Separation in multiple files
 - [ ] Support for multiple .class files
 - [ ] Support for .jar files

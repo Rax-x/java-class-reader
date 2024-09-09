@@ -724,12 +724,101 @@ class JavaClassParser:
                     'class_index': self._read_short(),
                     'method_index': self._read_short()
                 }
-            case 'Synthetic':
+            case 'Synthetic' | 'Deprecated':
                 return {}
             case 'Signature':
                 return { 'signature_index': self._read_short() }
             case 'SourceFile':
                 return { 'sourcefile_index': self._read_short() }
+            case 'SourceDebugExtension':
+                return { 'debug_extension': self._read_bytes(length) }
+            case 'LineNumberTable':
+                line_number_table_length: int = self._read_short()
+                line_number_table: ListOfDict = []
+
+                for _ in range(line_number_table_length):
+                    line_number_table.append({
+                        'start_pc': self._read_short(),
+                        'line_number': self._read_short()
+                    })
+                
+                return {
+                    'line_number_table_length': line_number_table_length,
+                    'line_number_table': line_number_table
+                }
+            
+            case 'LocalVariableTable':
+                local_variable_table_length: int = self._read_short()
+                local_variable_table: ListOfDict = []
+
+                for _ in range(local_variable_table_length):
+                    local_variable_table.append({
+                        'start_pc': self._read_short(),
+                        'length': self._read_short(),
+                        'name_index': self._read_short(),
+                        'descriptor_index': self._read_short(),
+                        'index': self._read_short()
+                    })
+                
+                return {
+                    'local_variable_table_length': local_variable_table_length,
+                    'local_variable_table': local_variable_table
+                }
+
+            case 'LocalVariableTypeTable':
+
+                local_variable_type_table_length: int = self._read_short()
+                local_variable_type_table: ListOfDict = []
+
+                for _ in range(local_variable_type_table_length):
+                    local_variable_type_table.append({
+                        'start_pc': self._read_short(),
+                        'length': self._read_short(),
+                        'name_index': self._read_short(),
+                        'signature_index': self._read_short(),
+                        'index': self._read_short()
+                    })
+                
+                return {
+                    'local_variable_type_table_length': local_variable_type_table_length,
+                    'local_variable_type_table': local_variable_type_table
+                }
+
+            case 'BootstrapMethods':
+                num_bootstrap_methods: int = self._read_short()
+                bootstrap_methods: ListOfDict = []
+
+                for _ in range(num_bootstrap_methods):
+                    bootstrap_method_ref: int = self._read_short()
+                    num_bootstrap_arguments: int = self._read_short()
+                    bootstrap_arguments: list[int] = [self._read_short() for _ in range(num_bootstrap_arguments)]
+
+                    bootstrap_methods.append({
+                        'bootstrap_method_ref': bootstrap_method_ref,
+                        'num_bootstrap_arguments': num_bootstrap_arguments,
+                        'bootstrap_arguments': bootstrap_arguments
+                    })
+
+                return {
+                    'num_bootstrap_methods': num_bootstrap_methods,
+                    'bootstrap_methods': bootstrap_methods
+                }
+                
+            case 'MethodParameters':
+                parameters_count: int = self._read_int()
+                parameters: ListOfDict = []
+
+                for _ in range(parameters_count):
+                    parameters.append({
+                        'name_index': self._read_short(),
+                        'access_flags': self._decode_access_flags(self._read_short(), MethodModifiers)
+                    })
+
+                return {
+                    'parameters_count': parameters_count,
+                    'parameters': parameters
+                }
+
             case _:
                 return {'info': self._read_bytes(length)}
 
